@@ -1,0 +1,4 @@
+Este é um arquivo de teste para o servidor UDP.
+Ele está sendo utilizado para testar a funcionalidade de requisição GET.
+Linha 3: O conteúdo deve ser retornado corretamente ao cliente.
+Fim do arquivo.
