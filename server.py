@@ -1,4 +1,6 @@
 import socket
+from utils import FileChecker
+
 
 # Cria o socket UDP
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

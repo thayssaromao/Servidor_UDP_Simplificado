@@ -1,16 +1,10 @@
 import socket
-
-# client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# message = "Hello World via UDP!"
-# # Envia para o servidor (localhost:12345)
-# client_socket.sendto(message.encode(), ("localhost", 12345))
-# print("Mensagem enviada!")
-
-
+HOST = '127.0.0.1' #ENDEREÇO DO SERVIDOR
+PORT = 12345 # Porta usada pelo servidor
+BUFFER_SIZE = 4096 #tam maximo de dados a serem recebidos
+    
 def requisitar_arquivo(nome_arquivo):
-    HOST = '127.0.0.1' #ENDEREÇO DO SERVIDOR
-    PORT = 12345 # Porta usada pelo servidor
-    BUFFER_SIZE = 4096 #tam maximo de dados a serem recebidos
+    
 
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #cria um cliente usando protocolo udp
 
