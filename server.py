@@ -1,5 +1,6 @@
 import socket
 from utils import FileChecker
+from protocol import interpretar_mensagem, construir_mensagem, MSG_CONEXAO_OK, MSG_ARQUIVO_NAO_ENCONTRADO
 
 
 # Cria o socket UDP
@@ -12,4 +13,18 @@ print("Servidor UDP esperando mensagens...")
 
 while True:
     data, addr = server_socket.recvfrom(1024)  # recebe até 1024 bytes
-    print(f"Mensagem recebida de {addr}: {data.decode()}")
+    message = data.decode()
+    print(f"Mensagem recebida de {addr}: {message}")
+
+    comando, args = interpretar_mensagem(message)
+    if comando == "GET":
+        nome_arquivo = args[0]
+        checker = FileChecker(nome_arquivo)
+
+        if checker.file_exists():
+            server_socket.sendto(MSG_CONEXAO_OK.encode(), addr)
+        else:
+            server_socket.sendto(MSG_ARQUIVO_NAO_ENCONTRADO.encode(), addr)
+
+    else:
+        server_socket.sendto("ERR|Comando inválido", addr)

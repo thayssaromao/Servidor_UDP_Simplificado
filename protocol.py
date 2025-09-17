@@ -41,7 +41,7 @@ def interpretar_mensagem(mensagem):
 # Mensagens padronizadas
 # ===============================
 
-MSG_CONEXAO_OK = construir_mensagem(CMD_OK, "Conexão estabelecida")
+MSG_CONEXAO_OK = construir_mensagem(CMD_OK, "Conexão estabelecida\n")
 MSG_DESCONEXAO = construir_mensagem(CMD_BYE, "Desconectado com sucesso")
 MSG_ERRO_GERAL = construir_mensagem(CMD_ERROR, "Erro desconhecido")
 MSG_ARQUIVO_NAO_ENCONTRADO = construir_mensagem(CMD_ERROR, "Arquivo não encontrado")
