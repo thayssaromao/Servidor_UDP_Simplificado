@@ -9,7 +9,7 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Associa o socket ao IP local e porta 12345
 server_socket.bind(("localhost", 12345))
 
-print("Servidor UDP esperando mensagens...")
+print("\nServidor UDP esperando mensagens...")
 
 while True:
     data, addr = server_socket.recvfrom(1024)  # recebe até 1024 bytes
@@ -22,9 +22,14 @@ while True:
         checker = FileChecker(nome_arquivo)
 
         if checker.file_exists():
-            server_socket.sendto(MSG_CONEXAO_OK.encode(), addr)
+            tamanho = checker.file_size_mb()
+            if tamanho < 1:
+                resposta = construir_mensagem("ERR", "Arquivo encontrado, mas menor que 1MB")
+            else:
+                resposta = construir_mensagem("OK", f"Arquivo encontrado ({tamanho:.2f} MB)")
+            server_socket.sendto(resposta.encode(), addr)
         else:
             server_socket.sendto(MSG_ARQUIVO_NAO_ENCONTRADO.encode(), addr)
 
     else:
-        server_socket.sendto("ERR|Comando inválido", addr)
+        server_socket.sendto("ERR|Comando inválido".encode(), addr)
