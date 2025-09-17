@@ -4,16 +4,23 @@ PORT = 12345 # Porta usada pelo servidor
 BUFFER_SIZE = 4096 #tam maximo de dados a serem recebidos
     
 def requisitar_arquivo(nome_arquivo):
-    
-
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #cria um cliente usando protocolo udp
 
-    comand = f"GET /{nome_arquivo}"
+    comand = f"GET|{nome_arquivo}"
     client.sendto(comand.encode(), (HOST, PORT)) # transforma o txt e, bytes e enviar pro servidor
 
     respost, _ = client.recvfrom(BUFFER_SIZE) #aguarda uma resposta do servidor
+    
     print("Resposta do servidor:\n")
     print(respost.decode(errors="ignore"))#Imprime a resposta do servidor e decodifica
 
 
-requisitar_arquivo("test.txt")
+requisitar_arquivo("files/test.txt")
+# while True:
+#     if __name__ == "__main__":
+#         print("=== Cliente UDP ===")
+#         nome_arquivo = input("Digite o nome do arquivo que deseja requisitar (ex: test.txt): ").strip()
+#         nome_arquivo = f"files/{nome_arquivo}"
+#         requisitar_arquivo(nome_arquivo)
+#     print("Encerrando o cliente UDP.")
+#     print("===================")
