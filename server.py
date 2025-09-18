@@ -1,6 +1,7 @@
 import socket
 from utils import FileChecker
-from protocol import interpretar_mensagem, construir_mensagem, MSG_CONEXAO_OK, MSG_ARQUIVO_NAO_ENCONTRADO
+from protocol import interpretar_mensagem, construir_mensagem, MSG_CONEXAO_OK, MSG_ARQUIVO_NAO_ENCONTRADO, CMD_SEGMENT, DELIMITADOR 
+
 
 
 # Cria o socket UDP
@@ -8,6 +9,8 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Associa o socket ao IP local e porta 12345
 server_socket.bind(("localhost", 12345))
+
+clientes_ativos = {}
 
 print("\nServidor UDP esperando mensagens...")
 
@@ -29,17 +32,15 @@ while True:
                 print(f"Arquivo '{nome_arquivo}' encontrado. Segmentando para envio para {addr}.")
     
                 TAMANHO_PAYLOAD = 1400 
-
                 segmentos = checker.dividir_arquivo(nome_arquivo, TAMANHO_PAYLOAD)
-
+                
                 buffer_envio = {i:segmento for i, segmento in enumerate(segmentos)}
-
                 print(f"Arquivo dividido em {len(buffer_envio)} segmentos.")
 
-                resposta = construir_mensagem("OK", f"Arquivo encontrado ({tamanho:.2f} MB)")
-            server_socket.sendto(resposta.encode(), addr)
+                clientes_ativos[addr] = buffer_envio
 
-
+                resposta = construir_mensagem("OK", f"Arquivo pronto. Total de segmentos: {len(buffer_envio)}")
+                server_socket.sendto(resposta.encode(), addr)
         else:
             server_socket.sendto(MSG_ARQUIVO_NAO_ENCONTRADO.encode(), addr)
     elif comando == "RETX": #caso seja a mensagem de retransmissão
@@ -61,7 +62,7 @@ while True:
         
         #reenviando os segmentos solicitados
         for seq_num in numero_seq_para_reenviar:
-            if seq_nu in buffer_envio_cliente:
+            if seq_num in buffer_envio_cliente:
                 segmento_para_reenviar = buffer_envio_cliente[seq_num]
                 print(f"Reenviando segmento {seq_num} para {addr}.")
 
