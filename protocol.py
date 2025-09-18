@@ -36,7 +36,24 @@ def interpretar_mensagem(mensagem):
     argumentos = partes[1:]
     return comando, argumentos
 
+def construir_pedido_retransmissao(numeros_faltantes: list) -> str:
+    """
+    Forja uma mensagem de RETX a partir de uma lista de números de sequência ausentes.
+    Ex: [5, 10, 15] -> "RETX|5,10,15"
+    """
 
+    if not numeros_faltantes:
+        return None
+
+    # Converte cada número de sequência em uma string.
+    numero_str = [str(seq) for seq in numeros_faltantes]
+
+    # Une os números com uma vírgula, formando a carga útil da sua mensagem.
+    payload = ",".join(numeros_str)
+
+    # Usa sua função já existente para construir o comando final.
+    return construir_mensagem(CMD_RETRANSMIT, payload)
+    
 # ===============================
 # Mensagens padronizadas
 # ===============================
