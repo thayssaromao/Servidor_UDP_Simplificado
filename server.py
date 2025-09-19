@@ -1,5 +1,5 @@
 import socket
-from utils import FileChecker
+from utils import FileChecker, dividir_arquivo 
 from protocol import interpretar_mensagem, construir_mensagem, MSG_CONEXAO_OK, MSG_ARQUIVO_NAO_ENCONTRADO, CMD_SEGMENT, DELIMITADOR 
 import time
 
@@ -32,7 +32,7 @@ while True:
                 print(f"Arquivo '{nome_arquivo}' encontrado. Segmentando para envio para {addr}.")
     
                 TAMANHO_PAYLOAD = 1400 
-                segmentos = checker.dividir_arquivo(nome_arquivo, TAMANHO_PAYLOAD)
+                segmentos = dividir_arquivo(nome_arquivo, TAMANHO_PAYLOAD)
                 
                 buffer_envio = {i:segmento for i, segmento in enumerate(segmentos)}
                 print(f"Arquivo dividido em {len(buffer_envio)} segmentos.")
@@ -58,7 +58,7 @@ while True:
     elif comando == "RETX": #caso seja a mensagem de retransmissão
         print(f"Recebido pedido de retransmissão de {addr}.")
 
-         buffer_envio_cliente = clientes_ativos.get(addr) #localiza o buffer de envio do cliente
+        buffer_envio_cliente = clientes_ativos.get(addr) #localiza o buffer de envio do cliente
 
         if not buffer_envio_cliente:
             print(f"Aviso: Pedido de RETX de um cliente desconhecido ou inativo {addr}. Ignorando.") 

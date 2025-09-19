@@ -52,14 +52,18 @@ class FileChecker:
     #            f.write(segmentos[seq])
     #    print(f"Arquivo montado com sucesso: {destino}")
 
-    #@staticmethod
-    #def dividir_arquivo(caminho: str, tamanho_bloco: int):
-    #    """Divide um arquivo em blocos de tamanho fixo."""
-    #    segmentos = []
-    #    with open(caminho, "rb") as f:
-    #        while True:
-    #            bloco = f.read(tamanho_bloco)
-    #            if not bloco:
-    #                break
-    #            segmentos.append(bloco)
-    #    return segmentos
+
+def dividir_arquivo(caminho: str, tamanho_bloco: int):
+    """Divide um arquivo em blocos de tamanho fixo."""
+    segmentos = []
+    # Use 'rb' (read binary) para que funcione com qualquer tipo de arquivo, não apenas texto.
+    try:
+        with open(caminho, "rb") as f:
+            while True:
+                bloco = f.read(tamanho_bloco)
+                if not bloco:
+                    break
+                segmentos.append(bloco)
+        return segmentos
+    except FileNotFoundError:
+        return [] # Retorna lista vazia se o arquivo não for encontrado
