@@ -1,7 +1,7 @@
 import socket
 from utils import FileChecker
 from protocol import interpretar_mensagem, construir_mensagem, MSG_CONEXAO_OK, MSG_ARQUIVO_NAO_ENCONTRADO, CMD_SEGMENT, DELIMITADOR 
-
+import time
 
 
 # Cria o socket UDP
@@ -41,6 +41,18 @@ while True:
 
                 resposta = construir_mensagem("OK", f"Arquivo pronto. Total de segmentos: {len(buffer_envio)}")
                 server_socket.sendto(resposta.encode(), addr)
+
+                for seq_num, segmento_dados in sorted(buffer_envio.items()):
+
+                    header = construir_mensagem(CMD_SEGMENT, seq_num)
+                    pacote_completo = header.encode() + DELIMITADOR.encode() + segmento_dados
+
+                    server_socket.sendto(pacote_completo, addr) #lançando pacote na rede
+                    print(f" -> Enviado segmento {seq_num}")
+
+                    time.sleep(0.001) # Pausa por 1 milissegundo entre os envios
+
+                print(f"Transmissão inicial para {addr} concluída.")   
         else:
             server_socket.sendto(MSG_ARQUIVO_NAO_ENCONTRADO.encode(), addr)
     elif comando == "RETX": #caso seja a mensagem de retransmissão
