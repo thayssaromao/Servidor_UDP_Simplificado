@@ -1,86 +1,72 @@
-import socket
-from utils import FileChecker, dividir_arquivo 
-from protocol import interpretar_mensagem, construir_mensagem, MSG_CONEXAO_OK, MSG_ARQUIVO_NAO_ENCONTRADO, CMD_SEGMENT, DELIMITADOR 
-import time
+UTILS
 
 
-# Cria o socket UDP
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+import os
 
-# Associa o socket ao IP local e porta 12345
-server_socket.bind(("localhost", 12345))
+class FileChecker:
+    def __init__(self, filename):
+        self.filename = filename
 
-clientes_ativos = {}
+    def file_exists(self):
+        return os.path.exists(self.filename)
 
-print("\nServidor UDP esperando mensagens...")
+    def file_size_mb(self):
+        if not self.file_exists():
+            return 0
+        size_bytes = os.path.getsize(self.filename)
+        return size_bytes / (1024 * 1024)
 
-while True:
-    data, addr = server_socket.recvfrom(1024)  # recebe até 1024 bytes
-    message = data.decode()
-    print(f"Mensagem recebida de {addr}: {message}")
+    def read_file(self):
+        if not self.file_exists():
+            print(f"O arquivo '{self.filename}' não existe.")
+            return
 
-    comando, args = interpretar_mensagem(message)
-    if comando == "GET":
-        nome_arquivo = args[0]
-        checker = FileChecker(nome_arquivo)
+        size_mb = self.file_size_mb()
 
-        if checker.file_exists():
-            tamanho = checker.file_size_mb()
-            if tamanho < 1:
-                resposta = construir_mensagem("ERR", "Arquivo encontrado, mas menor que 1MB")
-            else:
-                print(f"Arquivo '{nome_arquivo}' encontrado. Segmentando para envio para {addr}.")
-    
-                TAMANHO_PAYLOAD = 1400 
-                segmentos = dividir_arquivo(nome_arquivo, TAMANHO_PAYLOAD)
-                
-                buffer_envio = {i:segmento for i, segmento in enumerate(segmentos)}
-                print(f"Arquivo dividido em {len(buffer_envio)} segmentos.")
+        if size_mb < 1:
+            print(f"O arquivo '{self.filename}' deve ser maior que 1MB")
+            return
 
-                clientes_ativos[addr] = buffer_envio
+        print(f"O arquivo '{self.filename}' tem {size_mb:.2f} MB")
 
-                resposta = construir_mensagem("OK", f"Arquivo pronto. Total de segmentos: {len(buffer_envio)}")
-                server_socket.sendto(resposta.encode(), addr)
-
-                for seq_num, segmento_dados in sorted(buffer_envio.items()):
-
-                    header = construir_mensagem(CMD_SEGMENT, seq_num)
-                    pacote_completo = header.encode() + DELIMITADOR.encode() + segmento_dados
-
-                    server_socket.sendto(pacote_completo, addr) #lançando pacote na rede
-                    print(f" -> Enviado segmento {seq_num}")
-
-                    time.sleep(0.001) # Pausa por 1 milissegundo entre os envios
-
-                print(f"Transmissão inicial para {addr} concluída.")   
-        else:
-            server_socket.sendto(MSG_ARQUIVO_NAO_ENCONTRADO.encode(), addr)
-    elif comando == "RETX": #caso seja a mensagem de retransmissão
-        print(f"Recebido pedido de retransmissão de {addr}.")
-
-        buffer_envio_cliente = clientes_ativos.get(addr) #localiza o buffer de envio do cliente
-
-        if not buffer_envio_cliente:
-            print(f"Aviso: Pedido de RETX de um cliente desconhecido ou inativo {addr}. Ignorando.") 
-            continue
-
-        #decodificando os números de sequência
         try:
-            numero_seq_str = args[0].split(',')
-            numero_seq_para_reenviar = [int(s) for s in numeros_seq_str]
-        except (ValueError, IndexError):
-            print(f"Erro: Pedido de RETX mal formatado de {addr}. Ignorado")
-            continue
-        
-        #reenviando os segmentos solicitados
-        for seq_num in numero_seq_para_reenviar:
-            if seq_num in buffer_envio_cliente:
-                segmento_para_reenviar = buffer_envio_cliente[seq_num]
-                print(f"Reenviando segmento {seq_num} para {addr}.")
+            with open(self.filename, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+                print("Conteúdo do arquivo:")
+                for line in lines:
+                    print(line.strip())
+        except Exception as e:
+            print(f"ERRO ao ler o arquivo: {str(e)}")
 
-                pacote_a_reenviar = construir_mensagem(CMD_SEGMENT, seq_num).encode() + DELIMITADOR.encode() + segmento_para_reenviar
-                server_socket.sendto(pacote_a_reenviar, addr)
-            else:
-                print(f"Aviso: Cliente {addr} pediu segmento {seq_num} que não está no buffer.")
-    else:
-        server_socket.sendto("ERR|Comando inválido".encode(), addr)
+# checker = FileChecker('files/arquivo_grande.txt')
+# print(f"{checker.file_exists()}")
+# print(f"{checker.file_size_mb():.2f} MB")
+
+#@staticmethod
+    #def calcular_checksum(data: bytes) -> int:
+    #    """Calcula o checksum CRC32 de um bloco de dados."""
+    #    return zlib.crc32(data) & 0xffffffff
+
+    #@staticmethod
+    #def montar_arquivo(segmentos: dict, destino: str):
+    #    """Monta um arquivo a partir de segmentos recebidos."""
+    #    with open(destino, "wb") as f:
+    #        for seq in sorted(segmentos.keys()):
+    #            f.write(segmentos[seq])
+    #    print(f"Arquivo montado com sucesso: {destino}")
+
+
+def dividir_arquivo(caminho: str, tamanho_bloco: int):
+    """Divide um arquivo em blocos de tamanho fixo."""
+    segmentos = []
+    # Use 'rb' (read binary) para que funcione com qualquer tipo de arquivo, não apenas texto.
+    try:
+        with open(caminho, "rb") as f:
+            while True:
+                bloco = f.read(tamanho_bloco)
+                if not bloco:
+                    break
+                segmentos.append(bloco)
+        return segmentos
+    except FileNotFoundError:
+        return [] # Retorna lista vazia se o arquivo não for encontrado

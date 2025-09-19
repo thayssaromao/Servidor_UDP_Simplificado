@@ -1,4 +1,13 @@
 import socket
+import time
+from protocol import (
+    interpretar_mensagem,
+    construir_mensagem,
+    construir_pedido_retransmissao,
+    CMD_OK,
+    CMD_SEGMENT,
+    CMD_GET_FILE # Nome que você usou no seu protocolo
+)
 HOST = '127.0.0.1' #ENDEREÇO DO SERVIDOR
 PORT = 12345 # Porta usada pelo servidor
 BUFFER_SIZE = 4096 #tam maximo de dados a serem recebidos
@@ -126,7 +135,7 @@ def requisitar_arquivo(nome_arquivo):
 if __name__ == "__main__":
     # O nome do arquivo a ser buscado. Pode ser fixo ou pedido ao usuário.
     # Vamos usar o do seu projeto para o teste.
-    arquivo_alvo = "files/arquivo_grande.txt" 
+    arquivo_alvo = "files/test.txt" 
     
     print(f"=== Cliente UDP: Iniciando a requisição para {arquivo_alvo} ===")
     
