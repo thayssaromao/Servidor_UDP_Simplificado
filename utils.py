@@ -1,4 +1,4 @@
-import os
+import os, zlib
 
 class FileChecker:
     def __init__(self, filename):
@@ -10,8 +10,7 @@ class FileChecker:
     def file_size_mb(self):
         if not self.file_exists():
             return 0
-        size_bytes = os.path.getsize(self.filename)
-        return size_bytes / (1024 * 1024)
+        return os.path.getsize(self.filename) / (1024 * 1024)
 
     def read_file(self):
         if not self.file_exists():
@@ -35,6 +34,19 @@ class FileChecker:
         except Exception as e:
             print(f"ERRO ao ler o arquivo: {str(e)}")
 
-# checker = FileChecker('files/arquivo_grande.txt')
-# print(f"{checker.file_exists()}")
-# print(f"{checker.file_size_mb():.2f} MB")
+def dividir_arquivo(caminho: str, tamanho_bloco: int):
+    """Divide um arquivo em blocos binários."""
+    segmentos = []
+    try:
+        with open(caminho, "rb") as f:
+            while bloco := f.read(tamanho_bloco):
+                segmentos.append(bloco)
+        return segmentos
+    except FileNotFoundError:
+        return []
+
+def montar_arquivo(segmentos: dict, destino: str):
+    """Monta arquivo a partir dos segmentos recebidos."""
+    with open(destino, "wb") as f:
+        for seq in sorted(segmentos):
+            f.write(segmentos[seq])
