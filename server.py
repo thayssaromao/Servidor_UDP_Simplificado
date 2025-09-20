@@ -82,7 +82,7 @@ while True:
                 segmento = buffer_envio_cliente[seq_num]
                 pacote = construir_mensagem(CMD_SEGMENT, seq_num).encode() + DELIMITADOR.encode() + segmento
                 server_socket.sendto(pacote, addr)
-                print(f" -> Reenviado segmento {seq_num} para {addr}")
+                #print(f" -> Reenviado segmento {seq_num} para {addr}")
             else:
                 print(f"Aviso: segmento {seq_num} não está no buffer de {addr}")
 

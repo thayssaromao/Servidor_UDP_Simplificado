@@ -64,11 +64,11 @@ def requisitar_arquivo(nome_arquivo):
             seq_num = int(args_seg[0])
 
             if seq_num in segmentos_a_perder:
-                print(f" -> Descartando segmento {seq_num} (simulação de perda).")
+                #print(f" -> Descartando segmento {seq_num} (simulação de perda).")
                 segmentos_a_perder.remove(seq_num)
                 continue
 
-            print(f" -> Recebido segmento {seq_num}")
+            #print(f" -> Recebido segmento {seq_num}")
             buffer_recepcao[seq_num] = dados_segmento
 
         except socket.timeout:
@@ -106,10 +106,10 @@ def requisitar_arquivo(nome_arquivo):
                 seq_num = int(args_seg[0])
 
                 if seq_num in numeros_faltantes:
-                    print(f" -> Reforço recebido: segmento {seq_num}")
+                    #print(f" -> Reforço recebido: segmento {seq_num}")
                     buffer_recepcao[seq_num] = dados_segmento
-                else:
-                    print(f" -> Pacote duplicado ou inesperado {seq_num}, ignorando.")
+                #else:
+                    #print(f" -> Pacote duplicado ou inesperado {seq_num}, ignorando.")
 
         except socket.timeout:
             print("Timeout da rajada de retransmissão. Reavaliando...")
@@ -125,7 +125,7 @@ def requisitar_arquivo(nome_arquivo):
 
 
 if __name__ == "__main__":
-    arquivo_alvo = "files/arquivo_50mb.txt"
+    arquivo_alvo = "files/arquivo_grande.txt"
     print(f"=== Cliente UDP: Iniciando a requisição para {arquivo_alvo} ===")
     requisitar_arquivo(arquivo_alvo)
     print("=== Cliente UDP: Missão concluída ===")
