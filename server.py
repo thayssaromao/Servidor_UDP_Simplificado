@@ -35,6 +35,8 @@ while True:
             tamanho = checker.file_size_mb()
             if tamanho < 1:
                 resposta = construir_mensagem("ERR", "Arquivo encontrado, mas menor que 1MB")
+                print(f"Enviando resposta para {addr}: {resposta}")
+                server_socket.sendto(resposta.encode(), addr)
             else:
                 print(f"Arquivo '{nome_arquivo}' encontrado. Segmentando para envio para {addr}.")
 
@@ -47,20 +49,22 @@ while True:
                 clientes_ativos[addr] = buffer_envio
 
                 resposta = construir_mensagem("OK", f"Arquivo pronto. Total de segmentos: {len(buffer_envio)}")
+                print(f"Enviando resposta inicial para {addr}: {resposta}")
                 server_socket.sendto(resposta.encode(), addr)
 
                 for seq_num, segmento_dados in sorted(buffer_envio.items()):
                     header = construir_mensagem(CMD_SEGMENT, seq_num)
                     pacote_completo = header.encode() + DELIMITADOR.encode() + segmento_dados
 
+                    print(f" -> Enviando segmento {seq_num} para {addr}")
                     server_socket.sendto(pacote_completo, addr)  # enviando pacote
-                    print(f" -> Enviado segmento {seq_num}")
 
                     time.sleep(0.001)  # Pausa por 1 milissegundo entre os envios
 
                 print(f"Transmissão inicial para {addr} concluída.")
 
         else:
+            print(f"Arquivo '{nome_arquivo}' não encontrado. Enviando erro para {addr}.")
             server_socket.sendto(MSG_ARQUIVO_NAO_ENCONTRADO.encode(), addr)
 
     elif comando == "RETX":  # caso seja a mensagem de retransmissão
@@ -96,4 +100,5 @@ while True:
                 print(f"Aviso: Cliente {addr} pediu segmento {seq_num} que não está no buffer.")
 
     else:
+        print(f"Comando inválido recebido de {addr}: {comando}")
         server_socket.sendto("ERR|Comando inválido".encode(), addr)
