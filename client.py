@@ -66,7 +66,7 @@ def requisitar_arquivo(nome_arquivo):
 
             if seq_num not in buffer_recepcao:
                 buffer_recepcao[seq_num] = dados_segmento
-                print(f" -> Recebido segmento {seq_num}")
+                #print(f" -> Recebido segmento {seq_num}")
 
         except socket.timeout:
             print("Timeout da transmissão inicial. Verificando faltantes...")
