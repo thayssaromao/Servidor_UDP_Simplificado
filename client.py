@@ -3,27 +3,28 @@ from protocol import (
     interpretar_mensagem,
     construir_mensagem,
     construir_pedido_retransmissao,
+    CMD_GET_FILE,
     CMD_OK,
     CMD_SEGMENT,
-    CMD_GET_FILE  # Nome do comando GET no seu protocolo
 )
+import time
 
-HOST = '127.0.0.1'  # Endereço do servidor
-PORT = 12345        # Porta usada pelo servidor
-BUFFER_SIZE = 4096  # Tamanho máximo de dados a serem recebidos
-
+HOST = '127.0.0.1'
+PORT = 12345
+BUFFER_SIZE = 65536
+SEPARADOR = b'|||'  # mesmo separador usado no server
 
 def requisitar_arquivo(nome_arquivo):
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    # ================== 1. PEDIDO INICIAL ==================
-    comando_inicial = f"{CMD_GET_FILE}|{nome_arquivo}"
-    print(f"Enviando pedido inicial para o servidor: {comando_inicial}")
-    client.sendto(comando_inicial.encode(), (HOST, PORT))
+    # Pedido inicial
+    pedido_inicial = construir_mensagem(CMD_GET_FILE, nome_arquivo)
+    print(f"Enviando pedido inicial para o servidor: {pedido_inicial}")
+    client.sendto(pedido_inicial.encode(), (HOST, PORT))
 
-    # ================== 2. AGUARDAR CONFIRMAÇÃO ==================
+    # Receber confirmação do servidor
+    client.settimeout(5.0)
     try:
-        client.settimeout(5.0)  # Espera até 5 segundos
         resposta_inicial, _ = client.recvfrom(BUFFER_SIZE)
         comando, args = interpretar_mensagem(resposta_inicial.decode())
         print(f"Recebida resposta do servidor: {resposta_inicial.decode()}")
@@ -32,51 +33,47 @@ def requisitar_arquivo(nome_arquivo):
             print(f"Erro do servidor: {' '.join(args)}")
             return
 
-        total_segmentos = int(args[0])  # Extrai o número total de segmentos
+        total_segmentos = int(args[0])
         print(f"Servidor confirmou. Esperando {total_segmentos} segmentos.")
 
     except socket.timeout:
         print("Erro: O servidor não respondeu ao pedido inicial.")
         return
 
-    # ================== 3. PREPARAÇÃO PARA RECEPÇÃO ==================
+    # Receber segmentos
     buffer_recepcao = {}
-    segmentos_a_perder = {5, 10, 15}  # Simulação de perdas
+    segmentos_a_perder = {5, 10, 15}  # simulação de perda
     print(f"Simulação de perda: Segmentos {segmentos_a_perder} serão descartados.")
 
-    client.settimeout(2.0)  # Timeout para detectar fim da transmissão inicial
-
-    # ================== 4. LOOP DE RECEPÇÃO INICIAL ==================
+    client.settimeout(2.0)
     while len(buffer_recepcao) < total_segmentos:
         try:
             pacote, _ = client.recvfrom(BUFFER_SIZE)
+            if SEPARADOR not in pacote:
+                continue
+            header_bytes, dados_segmento = pacote.split(SEPARADOR, 1)
+            comando_seg, args_seg = interpretar_mensagem(header_bytes.decode())
 
-            split_index = pacote.find(b'|')
-            if split_index == -1:
-                print(" -> Pacote malformado recebido, ignorando")
+            if comando_seg != CMD_SEGMENT or not args_seg:
                 continue
 
-            header_bytes = pacote[:split_index + 2]
-            dados_segmento = pacote[split_index + 2:]
-
-            header_str = header_bytes.decode()
-            comando_seg, args_seg = interpretar_mensagem(header_str)
             seq_num = int(args_seg[0])
 
             if seq_num in segmentos_a_perder:
-                #print(f" -> Descartando segmento {seq_num} (simulação de perda).")
+                print(f" -> Descartando segmento {seq_num} (simulação de perda).")
                 segmentos_a_perder.remove(seq_num)
                 continue
 
-            #print(f" -> Recebido segmento {seq_num}")
-            buffer_recepcao[seq_num] = dados_segmento
+            if seq_num not in buffer_recepcao:
+                buffer_recepcao[seq_num] = dados_segmento
+                print(f" -> Recebido segmento {seq_num}")
 
         except socket.timeout:
-            print("Timeout! Transmissão inicial parece ter terminado.")
+            print("Timeout da transmissão inicial. Verificando faltantes...")
             break
 
-    # ================== 5. VERIFICAR PERDAS E PEDIR RETRANSMISSÃO ==================
-    while len(buffer_recepcao) < total_segmentos:
+    # Ciclo de retransmissão
+    while True:
         numeros_recebidos = set(buffer_recepcao.keys())
         numeros_esperados = set(range(total_segmentos))
         numeros_faltantes = sorted(list(numeros_esperados - numeros_recebidos))
@@ -87,40 +84,36 @@ def requisitar_arquivo(nome_arquivo):
         print(f"CICLO DE RECUPERAÇÃO: Faltando {len(numeros_faltantes)} segmentos: {numeros_faltantes[:10]}...")
 
         pedido_retx = construir_pedido_retransmissao(numeros_faltantes)
-        if pedido_retx:
-            client.sendto(pedido_retx.encode(), (HOST, PORT))
+        client.sendto(pedido_retx.encode(), (HOST, PORT))
 
+        # Receber retransmissões
+        client.settimeout(2.0)
         try:
             while True:
                 pacote, _ = client.recvfrom(BUFFER_SIZE)
+                if SEPARADOR not in pacote:
+                    continue
+                header_bytes, dados_segmento = pacote.split(SEPARADOR, 1)
+                comando_seg, args_seg = interpretar_mensagem(header_bytes.decode())
 
-                split_index = pacote.find(b'|')
-                if split_index == -1:
+                if comando_seg != CMD_SEGMENT or not args_seg:
                     continue
 
-                header_bytes = pacote[:split_index + 2]
-                dados_segmento = pacote[split_index + 2:]
-
-                header_str = header_bytes.decode()
-                comando_seg, args_seg = interpretar_mensagem(header_str)
                 seq_num = int(args_seg[0])
-
-                if seq_num in numeros_faltantes:
-                    #print(f" -> Reforço recebido: segmento {seq_num}")
+                if seq_num not in buffer_recepcao:
                     buffer_recepcao[seq_num] = dados_segmento
-                #else:
-                    #print(f" -> Pacote duplicado ou inesperado {seq_num}, ignorando.")
+                    print(f" -> Reforço recebido: segmento {seq_num}")
 
         except socket.timeout:
-            print("Timeout da rajada de retransmissão. Reavaliando...")
+            print("Timeout da rajada de retransmissão. Reavaliando faltantes...")
 
-    # ================== 6. MONTAR ARQUIVO FINAL ==================
+    # Montar arquivo final
     caminho_saida = "recebido_" + nome_arquivo.split('/')[-1]
     with open(caminho_saida, "wb") as f:
         for i in range(total_segmentos):
             f.write(buffer_recepcao[i])
-    print(f"Arquivo '{caminho_saida}' montado com sucesso!")
 
+    print(f"Todos os segmentos foram recebidos e arquivo '{caminho_saida}' montado com sucesso!")
     client.close()
 
 
