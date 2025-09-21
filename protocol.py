@@ -7,6 +7,8 @@ CMD_RETRANSMIT   = "RETX"
 CMD_BYE          = "BYE"
 CMD_ERROR        = "ERR"
 CMD_OK           = "OK"
+CMD_END          = "END"
+
 
 DELIMITADOR = "|"
 

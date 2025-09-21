@@ -2,12 +2,16 @@ import socket
 import time
 from utils import FileChecker, dividir_arquivo
 from protocol import (
+    CMD_GET_FILE,
     interpretar_mensagem,
     construir_mensagem,
     MSG_ARQUIVO_NAO_ENCONTRADO,
     CMD_SEGMENT,
     CMD_OK,
     CMD_RETRANSMIT,
+    CMD_BYE,
+    CMD_HELLO,
+    CMD_END
 )
 
 # Configuração do servidor
@@ -18,7 +22,7 @@ SEPARADOR = b'|||'  # Separador seguro entre header e payload
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_socket.bind((HOST, PORT))
-print("Servidor UDP esperando mensagens...")
+print("Servidor UDP esperando mensagens...\n")
 
 clientes_ativos = {}
 
@@ -29,7 +33,11 @@ while True:
 
     comando, args = interpretar_mensagem(message)
 
-    if comando == "GET":
+    if comando == CMD_HELLO:
+        resposta = construir_mensagem(CMD_OK, "Servidor pronto")
+        server_socket.sendto(resposta.encode(), addr)
+        print(f"Enviando resposta para {addr}: {resposta}\n")
+    elif comando == CMD_GET_FILE:
         nome_arquivo = args[0]
         checker = FileChecker(nome_arquivo)
 
@@ -53,6 +61,7 @@ while True:
         resposta = construir_mensagem(CMD_OK, len(buffer_envio))
         server_socket.sendto(resposta.encode(), addr)
         print(f"Enviando resposta para {addr}: {resposta}")
+        print("\n====================================================")
         print(f"Arquivo '{nome_arquivo}' dividido em {len(buffer_envio)} segmentos. Iniciando envio...")
 
         # Envio inicial
@@ -64,7 +73,14 @@ while True:
                 print(f" -> Enviado segmento {seq_num}")
             time.sleep(0.001)
 
-        print(f"Transmissão inicial para {addr} concluída.")
+        print(f"\nTransmissão inicial para {addr} concluída.")
+        time.sleep(0.2)
+        
+        # Após enviar todos os segmentos
+        resposta_fim = construir_mensagem(CMD_END, "Transmissão concluída")
+        server_socket.sendto(resposta_fim.encode(), addr)
+        print(f"Sinal de fim enviado para {addr}")
+
 
     elif comando == CMD_RETRANSMIT:
         buffer_envio_cliente = clientes_ativos.get(addr)
@@ -86,6 +102,11 @@ while True:
                 server_socket.sendto(pacote, addr)
             else:
                 print(f"Aviso: segmento {seq_num} não está no buffer de {addr}")
-
+    elif comando == CMD_BYE:
+        if addr in clientes_ativos:
+            del clientes_ativos[addr]
+            print(f"Sessão de {addr} encerrada e recursos liberados.")
+        else:
+            print(f"Aviso: BYE recebido de {addr} sem sessão ativa.")
     else:
         server_socket.sendto("ERR|Comando inválido".encode(), addr)

@@ -6,7 +6,8 @@ from protocol import (
     CMD_GET_FILE,
     CMD_OK,
     CMD_SEGMENT,
-)
+    CMD_HELLO,
+    CMD_BYE)
 import time
 
 HOST = '127.0.0.1'
@@ -16,8 +17,23 @@ SEPARADOR = b'|||'  # mesmo separador usado no server
 
 def requisitar_arquivo(nome_arquivo):
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client.settimeout(5.0)
 
-    # Pedido inicial
+    # Passo 1: Esperar o servidor estar pronto
+    print("Enviando HELLO para o servidor...")
+    client.sendto(construir_mensagem(CMD_HELLO).encode(), (HOST, PORT))
+    try:
+        resposta, _ = client.recvfrom(BUFFER_SIZE)
+        comando, _ = interpretar_mensagem(resposta.decode())
+        if comando != CMD_OK:
+            print("Resposta inesperada do servidor. Encerrando.")
+            return
+        print("Servidor respondeu com OK. Continuando...")
+    except socket.timeout:
+        print("Erro: O servidor não respondeu ao HELLO.")
+        return
+    
+    # Passo 2: Enviar pedido 
     pedido_inicial = construir_mensagem(CMD_GET_FILE, nome_arquivo)
     print(f"Enviando pedido inicial para o servidor: {pedido_inicial}")
     client.sendto(pedido_inicial.encode(), (HOST, PORT))
@@ -114,11 +130,16 @@ def requisitar_arquivo(nome_arquivo):
             f.write(buffer_recepcao[i])
 
     print(f"Todos os segmentos foram recebidos e arquivo '{caminho_saida}' montado com sucesso!")
+
+    # Passo 3: Enviar o BYE após a conclusão (cliente depende exclusivamente de saber o número total de segmentos para encerrar a transmissão.)
+    print("Enviando BYE para encerrar a sessão...")
+    client.sendto(construir_mensagem(CMD_BYE).encode(), (HOST, PORT))
+    
     client.close()
 
 
 if __name__ == "__main__":
     arquivo_alvo = "files/arquivo_grande.txt"
-    print(f"=== Cliente UDP: Iniciando a requisição para {arquivo_alvo} ===")
+    print(f"=== Cliente UDP: Iniciando a requisição para {arquivo_alvo} ===\n")
     requisitar_arquivo(arquivo_alvo)
-    print("=== Cliente UDP: Missão concluída ===")
+    print("\n=== Cliente UDP: Missão concluída ===")
