@@ -1,4 +1,4 @@
-import os, zlib
+import os
 
 class FileChecker:
     def __init__(self, filename):
@@ -34,19 +34,23 @@ class FileChecker:
         except Exception as e:
             print(f"ERRO ao ler o arquivo: {str(e)}")
 
-def dividir_arquivo(caminho: str, tamanho_bloco: int):
-    """Divide um arquivo em blocos binários."""
-    segmentos = []
-    try:
-        with open(caminho, "rb") as f:
-            while bloco := f.read(tamanho_bloco):
-                segmentos.append(bloco)
-        return segmentos
-    except FileNotFoundError:
-        return []
+class FileSegmenter:
+    """Funções auxiliares para manipulação de arquivos em blocos."""
 
-def montar_arquivo(segmentos: dict, destino: str):
-    """Monta arquivo a partir dos segmentos recebidos."""
-    with open(destino, "wb") as f:
-        for seq in sorted(segmentos):
-            f.write(segmentos[seq])
+    @staticmethod
+    def dividir_arquivo(caminho: str, tamanho_bloco: int):
+        """Divide um arquivo em blocos binários."""
+        segmentos = []
+        try:
+            with open(caminho, "rb") as f:
+                while bloco := f.read(tamanho_bloco):
+                    segmentos.append(bloco)
+            return segmentos
+        except FileNotFoundError:
+            return []
+
+    def montar_arquivo(segmentos: dict, destino: str):
+        """Monta arquivo a partir dos segmentos recebidos."""
+        with open(destino, "wb") as f:
+            for seq in sorted(segmentos):
+                f.write(segmentos[seq])

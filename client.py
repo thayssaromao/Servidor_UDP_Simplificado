@@ -15,15 +15,15 @@ import time
 HOST = '127.0.0.1'
 PORT = 12345
 BUFFER_SIZE = 65536
-SEPARADOR = b'|||'  # mesmo separador usado no server
+SEPARADOR = b'|||'  
 
-def requisitar_arquivo(nome_arquivo):
+def requisitar_arquivo(host, port, nome_arquivo):
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client.settimeout(5.0)
 
     # Passo 1: Esperar o servidor estar pronto
     print("Enviando HELLO para o servidor...")
-    client.sendto(construir_mensagem(CMD_HELLO).encode(), (HOST, PORT))
+    client.sendto(construir_mensagem(CMD_HELLO).encode(), (host, port))
     try:
         resposta, _ = client.recvfrom(BUFFER_SIZE)
         comando, _ = interpretar_mensagem(resposta.decode())
@@ -38,7 +38,7 @@ def requisitar_arquivo(nome_arquivo):
     # Passo 2: Enviar pedido 
     pedido_inicial = construir_mensagem(CMD_GET_FILE, nome_arquivo)
     print(f"Enviando pedido inicial para o servidor: {pedido_inicial}")
-    client.sendto(pedido_inicial.encode(), (HOST, PORT))
+    client.sendto(pedido_inicial.encode(), (host, port))
 
     # Receber confirmação do servidor
     client.settimeout(5.0)
@@ -115,7 +115,7 @@ def requisitar_arquivo(nome_arquivo):
         print(f"CICLO DE RECUPERAÇÃO: Faltando {len(numeros_faltantes)} segmentos: {numeros_faltantes[:10]}...")
 
         pedido_retx = construir_pedido_retransmissao(numeros_faltantes)
-        client.sendto(pedido_retx.encode(), (HOST, PORT))
+        client.sendto(pedido_retx.encode(), (host, port))
 
         # Receber retransmissões
         client.settimeout(2.0)
@@ -148,13 +148,34 @@ def requisitar_arquivo(nome_arquivo):
 
     # Passo 3: Enviar o BYE após a conclusão (cliente depende exclusivamente de saber o número total de segmentos para encerrar a transmissão.)
     print("Enviando BYE para encerrar a sessão...")
-    client.sendto(construir_mensagem(CMD_BYE).encode(), (HOST, PORT))
+    client.sendto(construir_mensagem(CMD_BYE).encode(), (host, port))
     
     client.close()
 
+def coletar_dados_requisicao():
+    """
+    Coleta interativamente o IP, a porta e o nome do arquivo do usuário.
+    Inclui tratamento de erro para a porta.
+    """
+    print("=== Coletando dados da requisição ===")
+    host = input("Digite o IP do servidor (ex: 127.0.0.1): ").strip() or '127.0.0.1'
+    
+    while True:
+        try:
+            port_str = input("Digite a porta do servidor (ex: 12345): ").strip() or '12345'
+            port = int(port_str)
+            break
+        except ValueError:
+            print("Entrada inválida. A porta deve ser um número inteiro.")
+
+    nome_arquivo = input("Digite o nome do arquivo a ser requisitado (ex: files/arquivo_grande.txt): ").strip() or 'files/arquivo_grande.txt'
+    
+    return host, port, nome_arquivo
 
 if __name__ == "__main__":
-    arquivo_alvo = "files/arquivo_grande.txt"
-    print(f"=== Cliente UDP: Iniciando a requisição para {arquivo_alvo} ===\n")
-    requisitar_arquivo(arquivo_alvo)
+    print("=== Cliente UDP: Iniciando ===")
+    HOST, PORT, arquivo_alvo = coletar_dados_requisicao()
+    
+    print(f"\n=== Cliente UDP: Iniciando a requisição para {arquivo_alvo} ===\n")
+    requisitar_arquivo(HOST, PORT, arquivo_alvo)
     print("\n=== Cliente UDP: Missão concluída ===")

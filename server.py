@@ -1,7 +1,7 @@
 import socket
 import time
 import zlib
-from utils import FileChecker, dividir_arquivo
+from utils import FileChecker, FileSegmenter
 from protocol import (
     CMD_GET_FILE,
     interpretar_mensagem,
@@ -54,7 +54,7 @@ while True:
             print(f"Enviando resposta para {addr}: {resposta}")
             continue
 
-        segmentos = dividir_arquivo(nome_arquivo, TAMANHO_PAYLOAD)
+        segmentos = FileSegmenter.dividir_arquivo(nome_arquivo, TAMANHO_PAYLOAD)
         buffer_envio = {i: segmento for i, segmento in enumerate(segmentos)}
         clientes_ativos[addr] = buffer_envio
 
