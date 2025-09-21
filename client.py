@@ -6,6 +6,8 @@ from protocol import (
     CMD_GET_FILE,
     CMD_OK,
     CMD_SEGMENT,
+    CMD_HELLO,
+    CMD_BYE
 )
 import time
 
@@ -16,8 +18,23 @@ SEPARADOR = b'|||'  # mesmo separador usado no server
 
 def requisitar_arquivo(nome_arquivo):
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client.settimeout(5.0)
 
-    # Pedido inicial
+    # Passo 1: Esperar o servidor estar pronto
+    print("Enviando HELLO para o servidor...")
+    client.sendto(construir_mensagem(CMD_HELLO).encode(), (HOST, PORT))
+    try:
+        resposta, _ = client.recvfrom(BUFFER_SIZE)
+        comando, _ = interpretar_mensagem(resposta.decode())
+        if comando != CMD_HELLO:
+            print("Resposta inesperada do servidor. Encerrando.")
+            return
+        print("Servidor respondeu com HELLO. Continuando...")
+    except socket.timeout:
+        print("Erro: O servidor não respondeu ao HELLO.")
+        return
+    
+    # Passo 2: Enviar pedido 
     pedido_inicial = construir_mensagem(CMD_GET_FILE, nome_arquivo)
     print(f"Enviando pedido inicial para o servidor: {pedido_inicial}")
     client.sendto(pedido_inicial.encode(), (HOST, PORT))

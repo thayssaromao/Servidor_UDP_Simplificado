@@ -2,12 +2,15 @@ import socket
 import time
 from utils import FileChecker, dividir_arquivo
 from protocol import (
+    CMD_GET_FILE,
     interpretar_mensagem,
     construir_mensagem,
     MSG_ARQUIVO_NAO_ENCONTRADO,
     CMD_SEGMENT,
     CMD_OK,
     CMD_RETRANSMIT,
+    CMD_BYE,
+    CMD_HELLO
 )
 
 # Configuração do servidor
@@ -29,7 +32,11 @@ while True:
 
     comando, args = interpretar_mensagem(message)
 
-    if comando == "GET":
+    if comando == CMD_HELLO:
+        resposta = construir_mensagem(CMD_HELLO, "Servidor pronto")
+        server_socket.sendto(resposta.encode(), addr)
+        print(f"Enviando resposta para {addr}: {resposta}")
+    elif comando == CMD_GET_FILE:
         nome_arquivo = args[0]
         checker = FileChecker(nome_arquivo)
 
@@ -86,6 +93,11 @@ while True:
                 server_socket.sendto(pacote, addr)
             else:
                 print(f"Aviso: segmento {seq_num} não está no buffer de {addr}")
-
+    elif comando == CMD_BYE:
+        if addr in clientes_ativos:
+            del clientes_ativos[addr]
+            print(f"Sessão de {addr} encerrada e recursos liberados.")
+        else:
+            print(f"Aviso: BYE recebido de {addr} sem sessão ativa.")
     else:
         server_socket.sendto("ERR|Comando inválido".encode(), addr)
