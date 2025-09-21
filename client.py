@@ -1,4 +1,5 @@
 import socket
+import zlib
 from protocol import (
     interpretar_mensagem,
     construir_mensagem,
@@ -7,7 +8,8 @@ from protocol import (
     CMD_OK,
     CMD_SEGMENT,
     CMD_HELLO,
-    CMD_BYE)
+    CMD_BYE,
+    CMD_END)
 import time
 
 HOST = '127.0.0.1'
@@ -68,12 +70,25 @@ def requisitar_arquivo(nome_arquivo):
             if SEPARADOR not in pacote:
                 continue
             header_bytes, dados_segmento = pacote.split(SEPARADOR, 1)
-            comando_seg, args_seg = interpretar_mensagem(header_bytes.decode())
 
-            if comando_seg != CMD_SEGMENT or not args_seg:
+            partes_header = header_bytes.decode().split("|")
+            comando_seg = partes_header[0]
+
+            if comando_seg != CMD_SEGMENT:
+                # Tratar pacotes de controle como CMD_END
+                if comando_seg == CMD_END:
+                    print("Sinal de fim de transmissão recebido.")
+                    break
                 continue
 
-            seq_num = int(args_seg[0])
+            seq_num = int(partes_header[1])
+            check_recebido = int(partes_header[2])
+
+            checksum_calculado = zlib.adler32(dados_segmento)
+            if check_recebido != checksum_calculado:
+                print(f" -> Aviso! Segmento {seq_num} corrompido. Descartando.")
+                #O cliente agora extrai o checksum do cabeçalho de cada segmento recebido, valida a integridade dos dados e descarta o pacote se o checksum não corresponder.
+                continue
 
             if seq_num in segmentos_a_perder:
                 print(f" -> Descartando segmento {seq_num} (simulação de perda).")

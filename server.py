@@ -1,5 +1,6 @@
 import socket
 import time
+import zlib
 from utils import FileChecker, dividir_arquivo
 from protocol import (
     CMD_GET_FILE,
@@ -66,8 +67,21 @@ while True:
 
         # Envio inicial
         for seq_num, segmento_dados in sorted(buffer_envio.items()):
-            header = construir_mensagem(CMD_SEGMENT, seq_num).encode() + SEPARADOR
+            checksum = zlib.adler32(segmento_dados)
+            header = f"{CMD_SEGMENT}|{seq_num}|{checksum}".encode()+ SEPARADOR
             pacote_completo = header + segmento_dados
+
+            # --- SIMULACAO DE CORRUPCAO ---
+            # Corromper o pacote 3 (exemplo) para testar o checksum
+            if seq_num == 3:
+                print("\n!!! CORROMPENDO O PACOTE 3 PARA TESTAR O CHECKSUM !!!\n")
+                # Altera um byte do pacote completo
+                pacote_corrompido = bytearray(pacote_completo)
+                pacote_corrompido[len(pacote_corrompido) // 2] = 0x00
+                pacote_corrompido[len(pacote_corrompido) // 2 + 1] = 0x00
+                pacote_completo = bytes(pacote_corrompido)
+            # -----------------------------
+
             server_socket.sendto(pacote_completo, addr)
             if seq_num % 1000 == 0:
                 print(f" -> Enviado segmento {seq_num}")
@@ -98,7 +112,8 @@ while True:
         for seq_num in numeros_seq_para_reenviar:
             if seq_num in buffer_envio_cliente:
                 segmento = buffer_envio_cliente[seq_num]
-                pacote = construir_mensagem(CMD_SEGMENT, seq_num).encode() + SEPARADOR + segmento
+                checksum = zlib.adler32(segmento)
+                pacote = f"{CMD_SEGMENT}|{seq_num}|{checksum}".encode() + SEPARADOR + segmento
                 server_socket.sendto(pacote, addr)
             else:
                 print(f"Aviso: segmento {seq_num} não está no buffer de {addr}")
