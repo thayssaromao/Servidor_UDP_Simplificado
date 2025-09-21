@@ -131,6 +131,11 @@ def requisitar_arquivo(nome_arquivo):
             f.write(buffer_recepcao[i])
 
     print(f"Todos os segmentos foram recebidos e arquivo '{caminho_saida}' montado com sucesso!")
+
+    # Passo 3: Enviar o BYE após a conclusão
+    print("Enviando BYE para encerrar a sessão...")
+    client.sendto(construir_mensagem(CMD_BYE).encode(), (HOST, PORT))
+    
     client.close()
 
 
