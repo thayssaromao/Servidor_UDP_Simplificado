@@ -103,6 +103,12 @@ def requisitar_arquivo(host, port, nome_arquivo):
             print("Timeout da transmissão inicial. Verificando faltantes...")
             break
 
+    # Defina quantas vezes o cliente tentará pedir retransmissão antes de desistir
+    MAX_TENTATIVAS_RETX = 5
+
+    # Dicionário para rastrear tentativas por segmento
+    tentativas_retx = {seq: 0 for seq in range(total_segmentos)}
+
     # Ciclo de retransmissão
     while True:
         numeros_recebidos = set(buffer_recepcao.keys())
@@ -111,6 +117,15 @@ def requisitar_arquivo(host, port, nome_arquivo):
 
         if not numeros_faltantes:
             break
+
+        #Verifica se algum segmento excedeu o limite de tentativas
+        if all(tentativas_retx[seq] >= MAX_TENTATIVAS_RETX for seq in numeros_faltantes):
+            print("Erro: Servidor indisponível ou segmentos não chegam. Transferência abortada.")
+            return
+
+        # Atualiza tentativas para os faltantes
+        for seq in numeros_faltantes:
+            tentativas_retx[seq] += 1
 
         print(f"CICLO DE RECUPERAÇÃO: Faltando {len(numeros_faltantes)} segmentos: {numeros_faltantes[:10]}...")
 
@@ -164,7 +179,13 @@ def coletar_dados_requisicao():
         try:
             port_str = input("Digite a porta do servidor (ex: 12345): ").strip() or '12345'
             port = int(port_str)
+            
+             # Evita portas bem conhecidas
+            if port < 1024:
+                print("Portas abaixo de 1024 são reservadas. Escolha outra.")
+                continue
             break
+            
         except ValueError:
             print("Entrada inválida. A porta deve ser um número inteiro.")
 
