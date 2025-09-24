@@ -57,6 +57,16 @@ def enviar_arquivo_para_cliente(addr, nome_arquivo):
         checksum = zlib.adler32(segmento_dados)
         header = f"{CMD_SEGMENT}|{seq_num}|{checksum}".encode() + SEPARADOR
         pacote_completo = header + segmento_dados
+
+        if seq_num == 3:
+            print("\n!!! CORROMPENDO O PACOTE 3 PARA TESTAR O CHECKSUM !!!\n")
+
+            pacote_corrompido = bytearray(pacote_completo)
+            pacote_corrompido[len(pacote_corrompido) // 2] = 0x00
+            pacote_corrompido[len(pacote_corrompido) // 2 + 1] = 0x00
+            pacote_completo = bytes(pacote_corrompido)
+
+
         server_socket.sendto(pacote_completo, addr)
         time.sleep(0.001)
 
